@@ -1,5 +1,4 @@
 ray
-git+https://github.com/ray-project/ray_lightning#ray_lightning
 scikit-learn
 pathos
 hyperopt
@@ -13,3 +12,4 @@ pygmtools
 h5py
 msbuddy
 lightgbm
+numpy

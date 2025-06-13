@@ -1,4 +1,4 @@
-dataset=nist20 # nist20, nist23
+dataset=massspecgym # nist20, nist23
 max_peaks=50
 ppm_diff=20
 workers=32

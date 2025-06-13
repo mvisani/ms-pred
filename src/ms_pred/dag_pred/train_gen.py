@@ -3,16 +3,18 @@
 Train model to predict DAG breakages
 
 """
-import logging
-import yaml
-import argparse
-from pathlib import Path
-from datetime import datetime
-import pandas as pd
-import numpy as np
 
-from torch.utils.data import DataLoader
+import argparse
+import logging
 import resource
+from datetime import datetime
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import yaml
+from torch.utils.data import DataLoader
+
 rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
 resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
 
@@ -140,7 +142,10 @@ def train_model():
     root_encode = kwargs["root_encode"]
     embed_elem_group = kwargs["embed_elem_group"]
     tree_processor = dag_data.TreeProcessor(
-        pe_embed_k=pe_embed_k, root_encode=root_encode, add_hs=add_hs, embed_elem_group=embed_elem_group,
+        pe_embed_k=pe_embed_k,
+        root_encode=root_encode,
+        add_hs=add_hs,
+        embed_elem_group=embed_elem_group,
     )
     # Build out frag datasets
     train_dataset = dag_data.GenDataset(
@@ -169,7 +174,7 @@ def train_model():
     # Define dataloaders
     collate_fn = train_dataset.get_collate_fn()
     persistent_workers = kwargs["num_workers"] > 0
-    mp_contex = 'spawn' if num_workers > 0 else None
+    mp_contex = "spawn" if num_workers > 0 else None
     train_loader = DataLoader(
         train_dataset,
         num_workers=kwargs["num_workers"],
@@ -251,7 +256,7 @@ def train_model():
     trainer = pl.Trainer(
         logger=[tb_logger, console_logger],
         accelerator="gpu" if kwargs["gpu"] else "cpu",
-        devices=1 if kwargs["gpu"] else 0,
+        devices=1 if kwargs["gpu"] else "auto",
         callbacks=callbacks,
         gradient_clip_val=5,
         min_epochs=kwargs["min_epochs"],

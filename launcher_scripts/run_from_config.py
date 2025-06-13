@@ -1,4 +1,4 @@
-""" Pythonic launcher
+"""Pythonic launcher
 
 Use combinations config file to launch trials
 
@@ -29,18 +29,19 @@ and transformed before being fed into the corresponding program.
         - run_2_replacement : [new_val3, new_val4]
 """
 
-from pathlib import Path
-import shutil
-import hashlib
-import subprocess
-import copy
-import time
-import itertools
-from datetime import datetime
 import argparse
+import copy
+import hashlib
+import itertools
+import shutil
+import subprocess
+import time
+from datetime import datetime
+from pathlib import Path
+
 import yaml
 
-PYTHON_NAME = "python3"
+PYTHON_NAME = "uv run "
 
 
 def md5(key: str) -> str:
@@ -58,7 +59,9 @@ def get_args():
     """parse yaml config"""
     parser = argparse.ArgumentParser()
     parser.add_argument("config_file", help="Name of configuration file")
-    parser.add_argument("--dry", default=False, action="store_true", help="Perform dry run")
+    parser.add_argument(
+        "--dry", default=False, action="store_true", help="Perform dry run"
+    )
     args = parser.parse_args()
     print(f"Loading experiment from: {args.config_file}\n")
     args_new = yaml.safe_load(open(args.config_file, "r"))
@@ -266,10 +269,10 @@ def main(
         else:
             raise NotImplementedError()
 
-    if dry: # Perform a dry run
+    if dry:  # Perform a dry run
         for cmd_str in scripts_to_run:
             print(f"_Command String_\n{cmd_str}")
-    else: # Actually launch these
+    else:  # Actually launch these
         if launch_method == "slurm":
             for cmd_str in scripts_to_run:
                 print(f"_Command String_\n{cmd_str}")
@@ -284,12 +287,15 @@ def main(
                     log.write(cmd_str + "\n")
         elif launch_method == "local_parallel":
             from ms_pred import common
+
             vis_devices = launcher_args.get("visible_devices", None)
             if vis_devices is None:
                 raise ValueError()
             else:  # Parallelize to several gpus
                 max_parallel = launcher_args.get("max_parallel_per_gpu", 1)
-                common.subprocess_parallel(scripts_to_run, max_parallel, gpus=vis_devices)
+                common.subprocess_parallel(
+                    scripts_to_run, max_parallel, gpus=vis_devices
+                )
         else:
             raise NotImplementedError()
 

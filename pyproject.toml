@@ -1,3 +1,46 @@
+[project]
+name = "ms_pred"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "cache-decorator>=2.2.0",
+    "cairosvg>=2.8.2",
+    "dgl",
+    "h5py>=3.14.0",
+    "huggingface-hub>=0.33.0",
+    "hyperopt>=0.2.7",
+    "ipdb>=0.13.13",
+    "lightgbm>=4.6.0",
+    "matchms>=0.30.0",
+    "msbuddy>=0.3.12",
+    "numpy>=2.2.6",
+    "omegaconf>=2.3.0",
+    "pandarallel>=1.6.5",
+    "pandas>=2.3.0",
+    "pathos>=0.3.4",
+    "pip>=25.1.1",
+    "pubchempy>=1.0.4",
+    "pygmtools",
+    "pytorch-lightning>=2.5.1.post0",
+    "ray[default,tune]>=2.47.0",
+    "scikit-learn>=1.7.0",
+    "seaborn>=0.13.2",
+    "setuptools>=80.9.0",
+    "torch==2.4.0",
+    "torch-scatter",
+]
+
+[tool.uv.sources]
+pygmtools = { git = "https://github.com/Thinklab-SJTU/pygmtools" }
+ms-pred = { workspace = true }
+dgl = { url = "https://data.dgl.ai/wheels/torch-2.4/dgl-2.4.0-cp312-cp312-manylinux1_x86_64.whl" }
+torch-scatter = { url = "https://data.pyg.org/whl/torch-2.4.0+cpu/torch_scatter-2.1.2+pt24cpu-cp312-cp312-linux_x86_64.whl" }
+
+[dependency-groups]
+dev = ["ipywidgets>=8.1.7", "jupyterlab>=4.4.3", "ms-pred"]
+
 [build-system]
-requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2", "numpy", "cython"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
