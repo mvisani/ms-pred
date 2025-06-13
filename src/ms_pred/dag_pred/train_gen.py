@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import yaml
+from lightning.pytorch.loggers import WandbLogger
 from torch.utils.data import DataLoader
 
 rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
@@ -252,9 +253,10 @@ def train_model():
     )
     earlystop_callback = EarlyStopping(monitor=monitor, patience=5)
     callbacks = [earlystop_callback, checkpoint_callback]
+    wandb_logger = WandbLogger(project="MS-PRED")
 
     trainer = pl.Trainer(
-        logger=[tb_logger, console_logger],
+        logger=[tb_logger, console_logger, wandb_logger],
         accelerator="gpu" if kwargs["gpu"] else "cpu",
         devices=1 if kwargs["gpu"] else "auto",
         callbacks=callbacks,
