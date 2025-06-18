@@ -1,8 +1,10 @@
-""" Sweep gen thresh """
-import yaml
-import pandas as pd
-from pathlib import Path
+"""Sweep gen thresh"""
+
 import subprocess
+from pathlib import Path
+
+import pandas as pd
+import yaml
 
 batch_size = 8
 list_devices = [0, 1]
@@ -15,10 +17,11 @@ subform_name = "magma_subform_50.hdf5"
 debug = False
 
 res_entries = [
-    {"folder": "results/dag_nist20/split_1_rnd1/",
-     "dataset": "nist20",
-     "test_split": "split_1"},
-
+    {
+        "folder": "results/massspecgym/split_1_rnd1/",
+        "dataset": "massspecgym",
+        "test_split": "split_1",
+    },
     # {"folder": "results/dag_nist20/split_1_rnd2/",
     #  "dataset": "nist20",
     #  "test_split": "split_1"},
@@ -44,10 +47,10 @@ if debug:
     max_nodes = max_nodes[:3]
 
 for res_entry in res_entries:
-    res_folder = Path(res_entry['folder'])
-    dataset = res_entry['dataset']
+    res_folder = Path(res_entry["folder"])
+    dataset = res_entry["dataset"]
     models = sorted(list((res_folder / "version_0").rglob("*.ckpt")))
-    split = res_entry['test_split']
+    split = res_entry["test_split"]
     for model in models:
         save_dir_base = model.parent.parent
 
@@ -62,7 +65,7 @@ for res_entry in res_entries:
             save_dir_temp = save_dir / str(max_node)
             save_dir_temp.mkdir(exist_ok=True)
 
-            cmd = f"""python {python_file} \\
+            cmd = f"""uv run {python_file} \\
             --batch-size {batch_size} \\
             --dataset-name  {dataset} \\
             --split-name {split}.tsv \\
@@ -72,7 +75,6 @@ for res_entry in res_entries:
             --threshold 0  \\
             --max-nodes {max_node} \\
             --num-workers {gpu_worker} \\
-            --gpu
             """
 
             pred_dir_folders.append(save_dir_temp)
@@ -85,7 +87,7 @@ for res_entry in res_entries:
         for pred_dir in pred_dir_folders:
             tree_pred_folder = pred_dir / "tree_preds.hdf5"
             form_pred_folder = pred_dir / "form_preds.hdf5"
-            cmd = f"""python data_scripts/dag/dag_to_subform.py \\
+            cmd = f"""uv run data_scripts/dag/dag_to_subform.py \\
                 --num-workers {workers} \\
                 --dag-folder {tree_pred_folder} \\
                 --out-dir {form_pred_folder} \\
@@ -97,7 +99,7 @@ for res_entry in res_entries:
 
         res_files = []
         for pred_dir in form_dir_folders:
-            analysis_cmd = f"""python analysis/form_pred_eval.py \\
+            analysis_cmd = f"""uv run analysis/form_pred_eval.py \\
                 --dataset {dataset} \\
                 --tree-pred-folder {pred_dir} \\
                 --subform-name {subform_name}

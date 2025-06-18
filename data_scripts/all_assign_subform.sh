@@ -1,15 +1,15 @@
-dataset=nist20  # nist20
+dataset=massspecgym  # nist20
 ppm_diff=20
-workers=64
+workers=20
 
-python data_scripts/forms/01_assign_subformulae.py \
+uv run data_scripts/forms/01_assign_subformulae.py \
     --data-dir data/spec_datasets/$dataset/ \
     --labels-file data/spec_datasets/$dataset/labels.tsv \
     --use-all \
     --output-dir no_subform.hdf5 \
     --num-workers $workers
 
-python data_scripts/forms/01_assign_subformulae.py \
+uv run data_scripts/forms/01_assign_subformulae.py \
     --data-dir data/spec_datasets/$dataset/ \
     --labels-file data/spec_datasets/$dataset/labels.tsv \
     --use-magma \
@@ -17,7 +17,7 @@ python data_scripts/forms/01_assign_subformulae.py \
     --output-dir magma_subform_50.hdf5 \
     --num-workers $workers
 
-python data_scripts/forms/03_add_form_intens.py \
+uv run data_scripts/forms/03_add_form_intens.py \
     --num-workers $workers \
     --pred-form-folder data/spec_datasets/$dataset/subformulae/magma_subform_50.hdf5 \
     --true-form-folder data/spec_datasets/$dataset/subformulae/no_subform.hdf5 \

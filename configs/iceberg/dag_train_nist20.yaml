@@ -12,7 +12,7 @@ universal_args:
   gpu: [false]
 
   seed: [1]
-  num-workers: [16]
+  num-workers: [24]
   batch-size: [32]
   max-epochs: [200]
 
