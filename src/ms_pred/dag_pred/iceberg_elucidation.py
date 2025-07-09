@@ -24,7 +24,6 @@ from collections.abc import Iterable
 
 import ms_pred.common as common
 from ms_pred.retrieval.retrieval_benchmark import dist_bin
-from ms_pred import coster
 
 
 def load_global_config(path_to_config='configs/iceberg/iceberg_elucidation.yaml', hostname=None):
@@ -77,7 +76,15 @@ def candidates_from_pubchem(
         def smiles_from_pubchem(form):
             try:
                 compounds = pcp.get_compounds(form, namespace='formula')
-                return [cmpd.isomeric_smiles for cmpd in compounds]
+                return_smis = []
+                for cmpd in compounds:
+                    smiles_records = [i for i in cmpd.to_dict().get("record").get("props") if i["urn"]["label"] == "SMILES"]
+                    smi = None
+                    if len(smiles_records) > 0:
+                        smi = smiles_records[0]['value']['sval']
+                    return_smis.append(smi)
+                return return_smis
+                # Was working: return [cmpd.isomeric_smiles for cmpd in compounds]
             except pcp.BadRequestError:
                 return []
         try:
@@ -864,128 +871,6 @@ def modi_finder(
         for fig in all_figs:
             fig.savefig(p, format='pdf', bbox_inches='tight')
         p.close()
-
-
-def generate_buyable_report(
-        feat_ids: list,
-        exp_specs: list,
-        adduct_to_smiles: List[dict],
-        config_dict: dict,
-        energy: list,
-        aux_info: List[dict]=None,
-        topk_per_row=3,
-        rows_per_page=10,
-        output_name='buyable_report',
-        cs_coster=None,
-        ppm=20,
-):
-    """
-    Generate a buyable report
-
-    Args:
-        feat_ids: List of length N, contains the feature IDs
-        exp_specs: List of length N, contains experiment spectrum which are {'30 eV': 2D array}
-        adduct_to_smiles: List of length N, each contains a dictionary like {"[M+H]+": ['CCNc1nc(Cl)nc(NC(C)=O)n1'], ...}
-        config_dict: ICEBERG run configuration dictionary
-        energy: collision energies
-        aux_info: auxiliary information to show in the report
-        topk_per_row: how many items on each row in the report
-        rows_per_page: how many rows on each page in the report
-        output_name: the name of the output file
-        cs_coster: Chem-Space coster
-        ppm: (int, default=20) parts-per-million tolerance for mass comparison
-    """
-    if cs_coster is None:
-        cs_coster = coster.ChemSpaceCoster('eFZBhgaLqwk4by3e567DhJavPvnerOX1cnmP6nkV9eMxybPvoZHQzVknSMq3z_8X')
-        cs_coster.build_status_log()
-
-    if aux_info is None:
-        aux_info = [None] * len(feat_ids)
-
-    config_dict = copy.deepcopy(config_dict)
-    all_figs = []
-    fig = None
-    iterator = enumerate(zip(feat_ids, exp_specs, adduct_to_smiles, aux_info))
-    if len(feat_ids) >= 10:
-        from tqdm import tqdm
-        iterator = tqdm(iterator, total=len(feat_ids))
-    for row_idx, (feat_id, exp_spec, adduct_to_smi, aux) in iterator:
-        if row_idx % rows_per_page == 0:
-            if fig is not None:
-                all_figs.append(fig)
-            fig = plt.figure(figsize=(topk_per_row * 10, rows_per_page * 7))
-
-            # headers
-            for col_idx in range(topk_per_row):
-                plt.subplot(rows_per_page + 1, topk_per_row + 1, col_idx + 2)
-                plt.text(0.4, 0.5, f'ICEBERG Top {col_idx + 1}', fontsize=20)
-                plt.axis('off')
-
-        # merge different adducts
-        all_topk_results = []
-        for adduct, smiles in adduct_to_smi.items():
-            config_dict['adduct'] = adduct
-
-            # Run ICEBERG to predict spectra
-            result_path, pmz = iceberg_prediction(smiles, energy, **config_dict)
-
-            # hack the precursor mz if there are multiple formulae within tolerance
-            pmz = common.merge_mz(pmz, ppm)
-
-            # Compare spectrum similarity for elucidation
-            topk_results = elucidation_over_candidates(result_path, exp_spec, precursor_mass=pmz, mol_name=feat_id, topk=rows_per_page, **config_dict)
-            topk_results = [list(r) + [result_path, pmz] for r in topk_results]
-            all_topk_results += topk_results
-
-        sorted(all_topk_results, key=lambda x: x[1])
-
-        # row title
-        plt.subplot(rows_per_page + 1, topk_per_row + 1, (row_idx % rows_per_page + 1) * (topk_per_row + 1) + 1)
-        title_txt = f'FEATURE_ID={feat_id}'
-        if aux:
-            for k, v in aux.items():
-                new_txt = f'\n{k}: {v}'
-                split_indices = np.arange(0, len(new_txt), 30) # make a new line if a line is longer than 30 characters
-                for i in range(len(split_indices)):
-                    if i < len(split_indices) - 1:
-                       title_txt += new_txt[split_indices[i]:split_indices[i+1]] + '\n'
-                    else:
-                        title_txt += new_txt[split_indices[i]:]
-        plt.text(0.2, 0.5, title_txt, fontsize=20, horizontalalignment='left', verticalalignment='center')
-        plt.axis('off')
-
-        # plot results
-        for col_idx, (smi, dist, _, result_path, pmz) in enumerate(all_topk_results[:topk_per_row]):
-            plt.subplot(rows_per_page + 1, topk_per_row + 1, (row_idx % rows_per_page + 1) * (topk_per_row + 1) + col_idx + 2)
-            explain_peaks(result_path, exp_spec, pmz, smi, num_peaks=10, axes=[plt.gca()], **config_dict)
-
-            # Add molecule to plot
-            common.plot_mol_as_vector(Chem.MolFromSmiles(smi), ax=plt.gca(), offset=(pmz/5, 0.7), zoom=0.003)
-            plt.title('')  # remove title
-
-            # Add entropy distance
-            plt.text(pmz / 5 * 2, 0.9, f'entr_dist={dist:.3f}', fontsize=15)
-
-            # Add price
-            is_in_stock, cost = cs_coster.get_buyable_and_cost(smi)
-            if is_in_stock:
-                buyable_text = f'in-stock\n${cost[0]}/{cost[1]}mg, ships {cost[2]} days'
-            else:
-                is_on_demand, cost = cs_coster.get_buyable_and_cost(smi, in_stock_only=False)
-                if is_on_demand and cost[0] is not None:
-                    buyable_text = f'on-demand\n${cost[0]}/{cost[1]}mg, ships {cost[2]} days'
-                else:
-                    buyable_text = 'not buyable/custom synthesis'
-            plt.text(pmz / 5 * 2, 0.6, buyable_text, fontsize=15)
-
-            # Add smiles
-            plt.text(pmz / 5 * 2, 0.4, smi, fontsize=10)
-
-    all_figs.append(fig)
-
-    with PdfPages(f'{output_name}.pdf') as pdf:
-        for fig in all_figs:
-            pdf.savefig(fig, bbox_inches='tight')
 
 
 def form_from_mgf_buddy(
